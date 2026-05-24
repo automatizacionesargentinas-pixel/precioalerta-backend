@@ -26,6 +26,8 @@ const SUPERS_VTEX = [
   { id: 'carrefour', base: 'https://www.carrefour.com.ar' },
   { id: 'jumbo',     base: 'https://www.jumbo.com.ar' },
   { id: 'disco',     base: 'https://www.disco.com.ar' },
+  { id: 'changomas', base: 'https://www.masonline.com.ar' },
+  { id: 'vea',       base: 'https://www.vea.com.ar' },
 ];
 
 // ─── Función principal de scraping ───────────────────────────────────────────
