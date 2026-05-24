@@ -1,0 +1,72 @@
+version: '3.9'
+
+services:
+
+  # ─── Base de datos ──────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: precioalerta-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       precioalerta
+      POSTGRES_USER:     precioalerta
+      POSTGRES_PASSWORD: precioalerta_pass_cambiar_en_prod
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U precioalerta"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── Redis ──────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: precioalerta-redis
+    restart: unless-stopped
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── Backend ────────────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: precioalerta-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV:     production
+      PORT:         3000
+      HOST:         0.0.0.0
+      DATABASE_URL: postgresql://precioalerta:precioalerta_pass_cambiar_en_prod@postgres:5432/precioalerta
+      REDIS_URL:    redis://redis:6379
+      API_KEY:      ${API_KEY:-precioalerta_dev_key}
+      FCM_SERVER_KEY: ${FCM_SERVER_KEY:-}
+      LOG_LEVEL:    info
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/health').then(r=>r.ok?process.exit(0):process.exit(1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  postgres_data:
+  redis_data:
