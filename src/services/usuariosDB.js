@@ -1,4 +1,4 @@
-import { pool } from '../db/pool.js';
+import { query as dbQuery } from '../db/pool.js';
 import { logger } from '../utils/logger.js';
 
 export const PLAN_LIMITES = {
@@ -8,7 +8,7 @@ export const PLAN_LIMITES = {
 
 // Obtener o crear usuario por device_id
 export async function getOrCreateUsuario(deviceId) {
-  const { rows } = await pool.query(
+  const { rows } = await dbQuery(
     `INSERT INTO usuarios (device_id)
      VALUES ($1)
      ON CONFLICT (device_id) DO UPDATE SET actualizado_en = NOW()
@@ -20,7 +20,7 @@ export async function getOrCreateUsuario(deviceId) {
 
 // Contar alertas activas del usuario
 export async function contarAlertasActivas(deviceId) {
-  const { rows } = await pool.query(
+  const { rows } = await dbQuery(
     `SELECT COUNT(*) as total FROM alertas
      WHERE device_id = $1 AND activa = true`,
     [deviceId]
@@ -47,7 +47,7 @@ export async function crearAlertaFreemium({ deviceId, productoId, superId, preci
     };
   }
 
-  const { rows } = await pool.query(
+  const { rows } = await dbQuery(
     `INSERT INTO alertas (device_id, usuario_id, producto_id, super_id, precio_objetivo)
      VALUES ($1, $2, $3, $4, $5)
      RETURNING *`,
@@ -59,7 +59,7 @@ export async function crearAlertaFreemium({ deviceId, productoId, superId, preci
 
 // Obtener alertas del usuario
 export async function getAlertasUsuario(deviceId) {
-  const { rows } = await pool.query(
+  const { rows } = await dbQuery(
     `SELECT a.*, p.nombre as producto_nombre, p.imagen_url,
             s.nombre as super_nombre, s.color_hex as super_color
      FROM alertas a
@@ -74,7 +74,7 @@ export async function getAlertasUsuario(deviceId) {
 
 // Eliminar alerta
 export async function eliminarAlerta(alertaId, deviceId) {
-  const { rowCount } = await pool.query(
+  const { rowCount } = await dbQuery(
     `UPDATE alertas SET activa = false
      WHERE id = $1 AND device_id = $2`,
     [alertaId, deviceId]
@@ -87,7 +87,7 @@ export async function activarPremium({ deviceId, mpPaymentId, mpSubscriptionId, 
   const premiumHasta = new Date();
   premiumHasta.setMonth(premiumHasta.getMonth() + meses);
 
-  const { rows } = await pool.query(
+  const { rows } = await dbQuery(
     `UPDATE usuarios
      SET plan = 'premium',
          mp_subscription_id = $2,
@@ -100,7 +100,7 @@ export async function activarPremium({ deviceId, mpPaymentId, mpSubscriptionId, 
   );
 
   if (rows[0] && mpPaymentId) {
-    await pool.query(
+    await dbQuery(
       `INSERT INTO pagos (usuario_id, mp_payment_id, mp_status, concepto, periodo_fin)
        VALUES ($1, $2, 'approved', 'premium_mensual', $3)
        ON CONFLICT (mp_payment_id) DO NOTHING`,
@@ -113,7 +113,7 @@ export async function activarPremium({ deviceId, mpPaymentId, mpSubscriptionId, 
 
 // Verificar y degradar usuarios con premium vencido
 export async function verificarVencimientos() {
-  const { rowCount } = await pool.query(
+  const { rowCount } = await dbQuery(
     `UPDATE usuarios SET plan = 'free', actualizado_en = NOW()
      WHERE plan = 'premium' AND premium_hasta < NOW()`
   );

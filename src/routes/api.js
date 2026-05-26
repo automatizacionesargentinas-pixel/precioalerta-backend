@@ -117,29 +117,7 @@ export async function registrarRutas(app) {
 
   // ─── Alertas ────────────────────────────────────────────────────────────────
 
-  const AlertaSchema = z.object({
-    device_token:    z.string().min(10),
-    producto_id:     z.string().min(1),
-    super_id:        z.string().optional(),
-    precio_objetivo: z.number().positive(),
-  });
-
-  app.post('/v1/alerts', async (req, reply) => {
-    const parsed = AlertaSchema.safeParse(req.body);
-    if (!parsed.success) {
-      return reply.status(400).send({ ok: false, error: parsed.error.issues });
-    }
-
-    const { device_token, producto_id, super_id, precio_objetivo } = parsed.data;
-    const id = await crearAlerta({
-      deviceToken:    device_token,
-      productoId:     producto_id,
-      superId:        super_id ?? null,
-      precioObjetivo: precio_objetivo,
-    });
-
-    return reply.status(201).send({ ok: true, data: { id } });
-  });
+  // POST /v1/alerts → movido a freemium.js con control freemium
 
   // ─── Admin: scraping manual ─────────────────────────────────────────────────
 
