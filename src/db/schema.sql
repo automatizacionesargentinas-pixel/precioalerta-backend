@@ -108,3 +108,40 @@ CREATE TABLE IF NOT EXISTS scrape_logs (
 
 CREATE INDEX IF NOT EXISTS idx_logs_super ON scrape_logs(super_id);
 CREATE INDEX IF NOT EXISTS idx_logs_fecha ON scrape_logs(iniciado_en DESC);
+
+-- ─── FREEMIUM: Usuarios y suscripciones ───────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS usuarios (
+  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  email           TEXT UNIQUE,
+  device_id       TEXT UNIQUE NOT NULL,    -- ID único del dispositivo
+  plan            TEXT NOT NULL DEFAULT 'free', -- 'free' | 'premium'
+  mp_subscription_id TEXT,                -- ID de suscripción en MercadoPago
+  mp_preapproval_id  TEXT,                -- Pre-approval ID de MP
+  premium_desde   TIMESTAMPTZ,
+  premium_hasta   TIMESTAMPTZ,
+  creado_en       TIMESTAMPTZ DEFAULT NOW(),
+  actualizado_en  TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_usuarios_device  ON usuarios(device_id);
+CREATE INDEX IF NOT EXISTS idx_usuarios_plan    ON usuarios(plan);
+
+-- Agregar device_id a alertas para relacionarlas con usuarios
+ALTER TABLE alertas ADD COLUMN IF NOT EXISTS device_id TEXT;
+ALTER TABLE alertas ADD COLUMN IF NOT EXISTS usuario_id UUID REFERENCES usuarios(id);
+CREATE INDEX IF NOT EXISTS idx_alertas_device ON alertas(device_id);
+
+-- ─── Pagos / transacciones ────────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS pagos (
+  id              BIGSERIAL PRIMARY KEY,
+  usuario_id      UUID REFERENCES usuarios(id),
+  mp_payment_id   TEXT UNIQUE,
+  mp_status       TEXT,                   -- 'approved' | 'pending' | 'rejected'
+  monto           NUMERIC(12,2),
+  concepto        TEXT DEFAULT 'premium_mensual',
+  periodo_inicio  TIMESTAMPTZ,
+  periodo_fin     TIMESTAMPTZ,
+  creado_en       TIMESTAMPTZ DEFAULT NOW()
+);

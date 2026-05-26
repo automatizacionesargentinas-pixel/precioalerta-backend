@@ -3,7 +3,8 @@ import Fastify       from 'fastify';
 import cors          from '@fastify/cors';
 import helmet        from '@fastify/helmet';
 import rateLimit     from '@fastify/rate-limit';
-import { registrarRutas }   from './routes/api.js';
+import { registrarRutas }          from './routes/api.js';
+import { registrarRutasFreemium } from './routes/freemium.js';
 import { registrarCronJobs } from './workers/scrapeWorker.js';
 import { testConnection }    from './db/pool.js';
 import { testRedis }         from './db/redis.js';
@@ -65,6 +66,7 @@ app.setErrorHandler((error, req, reply) => {
 // ─── Rutas ────────────────────────────────────────────────────────────────────
 
 await registrarRutas(app);
+  await registrarRutasFreemium(app);
 
 // ─── Arranque ─────────────────────────────────────────────────────────────────
 
